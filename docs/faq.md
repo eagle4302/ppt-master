@@ -22,7 +22,7 @@ These boundaries are defined by the [image-generation contract](../skills/ppt-ma
 
 ## Q: What is the difference between cropping an image and generating one at a requested aspect ratio?
 
-They change different things. `crop=adaptive` permits but never requires cropping. Executor may use `meet` to show the complete source or a focal-safe `slice` to fill the chosen container; both reuse source pixels. An AI job's `aspect_ratio` requests a newly generated canvas. A reference edit transforms one supplied image through the separate single-image path; it is not a manifest batch operation. See the [image resource-list rules](../skills/ppt-master/references/strategist-image.md), [Executor crop policy](../skills/ppt-master/references/executor-image.md), [SVG image placement contract](../skills/ppt-master/references/svg-image-embedding.md), and [image manifest schema](../skills/ppt-master/references/image-generator.md).
+They change different things. `crop=adaptive` permits but never requires cropping. Executor may use `meet` to show the complete source or a focal-safe `slice` to fill the chosen container; both reuse source pixels. An AI job's `aspect_ratio` requests a newly generated canvas of any `W:H`; the backend outputs the nearest size its model allows, and placement crops to the requested shape. A reference edit transforms one supplied image through the separate single-image path; it is not a manifest batch operation. See the [image resource-list rules](../skills/ppt-master/references/strategist-image.md), [Executor crop policy](../skills/ppt-master/references/executor-image.md), [SVG image placement contract](../skills/ppt-master/references/svg-image-embedding.md), and [image manifest schema](../skills/ppt-master/references/image-generator.md).
 
 ## Q: Can I generate a deck with just a topic, no source materials?
 
@@ -200,7 +200,7 @@ The repository documents template reuse as reuse of identity, method, structure,
 
 ## Q: Are the charts in the generated PPTX editable?
 
-By default, charts are rendered as **custom-designed SVG graphics** converted to native PowerPoint shapes — fully editable as shapes (move, recolor, retype, restyle). This is a deliberate default over Excel-driven chart objects: PowerPoint's default charts look generic and dated, and lock decks into rigid templates. SVG charts give you publication-quality visuals you can fine-tune directly in PowerPoint, and they render pixel-consistently across PowerPoint / Keynote / LibreOffice / WPS.
+By default, charts are rendered as **custom-designed SVG graphics** converted to native PowerPoint shapes — fully editable as shapes (move, recolor, retype, restyle). This is a deliberate default over Excel-driven chart objects: PowerPoint's default charts look generic and dated, and lock decks into rigid templates. SVG charts give you publication-quality visuals you can fine-tune directly in PowerPoint. Microsoft PowerPoint is the validation target; other apps may render them differently.
 
 If your workflow specifically requires Excel-driven data editing or PowerPoint's chart/table-specific controls, export with `--native-charts-and-tables`: supported data charts and pure text-grid tables then ship as **PowerPoint-native Chart / Table objects backed by data** (saved as `<active-project>/exports/<name>_<timestamp>_native_charts_tables.pptx`, keeping the deck's own colors instead of PowerPoint's default theme). The default SVG fallback also becomes editable DrawingML shapes, but it has no chart data workbook or table/chart object model. Native objects may look slightly different across PowerPoint / Keynote / LibreOffice / WPS, so the shape-based route remains the visual-stability default.
 
@@ -212,8 +212,8 @@ assets. A block uses a formula group; inline math uses a leaf
 `<tspan data-pptx-inline-formula="...">preview</tspan>` among ordinary text
 runs. Matrices, multiline derivations, and other high-structure expressions
 remain blocks. Raw LaTeX does not render in SVG, so each marker carries an
-ordinary visible preview that native export replaces without adding an image
-fallback.
+ordinary visible preview; native export keeps it as a native-shape fallback
+for clients without Office Math, never an image.
 
 Forward compilation covers every explicitly named input in Microsoft's
 documented Microsoft 365 2606 / Mac 16.110 LaTeX profile and 2605 / 16.109
@@ -231,8 +231,8 @@ executable source profile is pinned to the Microsoft documentation versions
 above. Repository verification covers compiler behavior, OMML structure, and
 PPTX packaging rather than complete Microsoft 365 UI rendering/editability
 certification. Formula display and editability in Keynote, WPS, LibreOffice,
-and other non-PowerPoint clients are not supported; PPT Master does not add an
-image fallback for them.
+and other non-PowerPoint clients are not supported; those clients show the
+SVG preview fallback as ordinary shapes and text, not editable math.
 
 ## Q: Can generated slides contain clickable links?
 
@@ -290,9 +290,9 @@ No. PPT Master is a presentation workflow, not a model or a complete agent. It s
 **The full-power combination:**
 
 - **Claude with a large context window** (ideally ~1M tokens): a large context window lets the Executor see every previously generated page in the same session, maintaining visual consistency across the entire deck without splitting runs. Smaller windows force split-mode execution, which introduces visible style drift between phases.
-- **AI image generation with `gpt-image-2`** (or similar): placeholder-grade stock images are the single biggest reason decks look generic. Replacing them with on-brand AI-generated illustrations changes the perceived quality immediately.
+- **AI image generation with `gpt-image-2.5-sunburst`** (or similar): placeholder-grade stock images are the single biggest reason decks look generic. Replacing them with on-brand AI-generated illustrations changes the perceived quality immediately.
 
-If the results you've seen look mediocre, check your setup before concluding anything about the tool: What model? What context size? Was image generation enabled? PPT Master + Claude Opus at 1M context + `gpt-image-2` images is a genuinely different experience from PPT Master + a small open-source model with no image API configured.
+If the results you've seen look mediocre, check your setup before concluding anything about the tool: What model? What context size? Was image generation enabled? PPT Master + Claude Opus at 1M context + `gpt-image-2.5-sunburst` images is a genuinely different experience from PPT Master + a small open-source model with no image API configured.
 
 > **No Claude access?** Project sponsor [PackyCode](https://www.packyapi.ai/register?aff=ppt-master) provides pay-as-you-go access to Claude and other models — no subscription, no overseas card required. Use promo code **`ppt-master`** for 10% off.
 

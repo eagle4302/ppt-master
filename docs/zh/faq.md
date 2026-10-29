@@ -22,7 +22,7 @@ DOCX 转换会把内嵌图片素材抽取到配套素材目录，并写入图片
 
 ## Q: 把原图裁成指定比例，与按指定比例生成新图有什么区别？
 
-两者改变的对象不同。`crop=adaptive` 允许但不强制裁剪。Executor 可用 `meet` 完整显示原图，或用保护焦点内容的 `slice` 填满所选容器；两者都复用来源像素。AI 任务的 `aspect_ratio` 是新生成画布的要求。参考图编辑则通过独立的单图路径变换一张给定图片，不是 manifest 批处理。详见[图片资源清单规则](../../skills/ppt-master/references/strategist-image.md)、[Executor 裁剪政策](../../skills/ppt-master/references/executor-image.md)、[SVG 图片放置合同](../../skills/ppt-master/references/svg-image-embedding.md)与[图片 manifest schema](../../skills/ppt-master/references/image-generator.md)。
+两者改变的对象不同。`crop=adaptive` 允许但不强制裁剪。Executor 可用 `meet` 完整显示原图，或用保护焦点内容的 `slice` 填满所选容器；两者都复用来源像素。AI 任务的 `aspect_ratio` 是新生成画布的要求，可写任意 `W:H`；后端输出该模型允许的最接近尺寸，放置时再裁到所需形状。参考图编辑则通过独立的单图路径变换一张给定图片，不是 manifest 批处理。详见[图片资源清单规则](../../skills/ppt-master/references/strategist-image.md)、[Executor 裁剪政策](../../skills/ppt-master/references/executor-image.md)、[SVG 图片放置合同](../../skills/ppt-master/references/svg-image-embedding.md)与[图片 manifest schema](../../skills/ppt-master/references/image-generator.md)。
 
 ## Q: 只有一个主题或想法、没有任何资料，也能生成吗？
 
@@ -199,7 +199,7 @@ PPT Master 没有文档化的 `wireframe` 运行模式，也没有跨版本视�
 
 ## Q: 生成的图表可以编辑数据吗？
 
-默认情况下，图表以**自定义设计的 SVG 图形**形式渲染，转换为原生 PowerPoint 形状——形状级别完全可编辑（移动、改色、改文字、调样式）。默认不用 Excel 驱动的图表对象是有意为之：PowerPoint 默认图表样式陈旧、视觉受限于固定模板。SVG 图表则提供出版物级的视觉质量，可以在 PowerPoint 中直接精修，且在 PowerPoint / Keynote / LibreOffice / WPS 间像素一致。
+默认情况下，图表以**自定义设计的 SVG 图形**形式渲染，转换为原生 PowerPoint 形状——形状级别完全可编辑（移动、改色、改文字、调样式）。默认不用 Excel 驱动的图表对象是有意为之：PowerPoint 默认图表样式陈旧、视觉受限于固定模板。SVG 图表则提供出版物级的视觉质量，可以在 PowerPoint 中直接精修。验证目标是 Microsoft PowerPoint，其他软件的显示可能有差异。
 
 如果你的工作流明确需要 Excel 驱动的数据编辑或 PowerPoint 的图表/表格专属控制，导出时加 `--native-charts-and-tables`：受支持的数据图表和纯文本表格会以**带数据源的 PowerPoint 原生 Chart / Table 对象**形式导出（保存为 `<活动项目>/exports/<name>_<timestamp>_native_charts_tables.pptx`，并保留这份 deck 自己的配色，而不是套用 PowerPoint 默认主题）。默认 SVG fallback 同样会转换成可编辑 DrawingML shape，但不具备图表数据工作簿或图表/表格对象模型。原生对象在 PowerPoint / Keynote / LibreOffice / WPS 间可能略有差异，因此形状路线仍是视觉稳定性的默认选择。
 
@@ -210,7 +210,8 @@ PPT Master 没有文档化的 `wireframe` 运行模式，也没有跨版本视�
 group；行内公式使用夹在普通文本 run 中的叶子
 `<tspan data-pptx-inline-formula="...">preview</tspan>`。矩阵、多行推导等
 高结构表达仍使用块级形式。原始 LaTeX 不能直接在 SVG 中显示，因此每个
-marker 都携带普通可见预览；原生导出会替换该预览，不增加图片兜底。
+marker 都携带普通可见预览；原生导出把它保留为原生形状兜底，供不支持 Office Math
+的客户端显示，不使用图片。
 
 前向编译覆盖 Microsoft 文档中 Microsoft 365 2606 / Mac 16.110 LaTeX
 档位与 2605 / 16.109 mhchem 档位明确点名的全部输入，包括符号、结构、环境、
@@ -224,8 +225,8 @@ fallback 保留。
 生成的 OMML 仍以 PowerPoint 2010+ 包为目标，可执行输入档位锁定到上述
 Microsoft 文档版本。仓库验证覆盖编译器行为、OMML 结构与 PPTX 打包，不等同于
 完整的 Microsoft 365 UI 显示 / 编辑认证。Keynote、WPS、LibreOffice 等非
-PowerPoint 客户端中的公式显示与编辑能力不在支持范围内；PPT Master 不为这些
-客户端附加公式图片兜底。
+PowerPoint 客户端中的公式显示与编辑能力不在支持范围内；这些客户端显示以普通
+形状和文字写入的 SVG 预览兜底，而不是可编辑公式。
 
 ## Q: 生成的页面可以带可点击链接吗？
 
@@ -278,9 +279,9 @@ python3 skills/ppt-master/scripts/svg_to_pptx.py <project> -a auto --animation-t
 **发挥完整实力的组合：**
 
 - **Claude 大上下文窗口**（推荐 ~100 万 token 级别）：大上下文让 Executor 在同一个会话里看到全部已生成页面，在不拆分运行的前提下保持整份 deck 的视觉一致性。上下文不足时被迫走拆分模式，两段之间会出现明显的风格漂移。
-- **AI 生图，推荐 `gpt-image-2`**（或同等质量）：配图水平是 deck 整体观感的最大变量。用占位级的网络图片和用真正贴合内容的 AI 生成图，视觉效果完全是两个量级。
+- **AI 生图，推荐 `gpt-image-2.5-sunburst`**（或同等质量）：配图水平是 deck 整体观感的最大变量。用占位级的网络图片和用真正贴合内容的 AI 生成图，视觉效果完全是两个量级。
 
-如果你看到的效果差强人意，先对照以下几点检查你的配置，再下结论：用的什么模型？上下文开了多大？有没有接入图片生成 API？同样的工作流，Claude Opus 配 100 万 token 上下文配 `gpt-image-2` 的结果，和小参数开源模型配零配置的结果，是截然不同的体验。
+如果你看到的效果差强人意，先对照以下几点检查你的配置，再下结论：用的什么模型？上下文开了多大？有没有接入图片生成 API？同样的工作流，Claude Opus 配 100 万 token 上下文配 `gpt-image-2.5-sunburst` 的结果，和小参数开源模型配零配置的结果，是截然不同的体验。
 
 > **没有 Claude 渠道？** 本项目赞助商 [PackyCode](https://www.packyapi.ai/register?aff=ppt-master) 提供 Claude 及其他主流模型的按量付费接入——无需订阅，无需境外信用卡，支持国内支付，开箱即用。充值时填写优惠码 **`ppt-master`** 享 9 折。
 
