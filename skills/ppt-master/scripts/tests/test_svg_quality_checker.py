@@ -509,3 +509,49 @@ class ForbiddenAttributeTests(unittest.TestCase):
         self.assertTrue(self._errors('<g class="a"/>'))
         self.assertTrue(self._errors('<rect onclick="x()"/>'))
         self.assertTrue(self._errors("<style>@import url(theme.css);</style>"))
+
+
+class InformationFormAdvisoryTests(unittest.TestCase):
+    """The shared-standards §6 advisory fires only on a relationship title."""
+
+    RICH_IMAGE = '<image x="400" y="200" width="500" height="300" href="a.png"/>'
+
+    @staticmethod
+    def _page(*extra: str, title: str = '系統架構：三層資料流') -> ET.Element:
+        blocks = ''.join(
+            f'<text x="60" y="{160 + i * 30}" font-size="16">prose block {i}</text>'
+            for i in range(3)
+        )
+        return _parse_svg(
+            f'<text x="60" y="110" font-size="36">{title}</text>'
+            + blocks + ''.join(extra),
+            view_box='0 0 1280 720',
+        )
+
+    def _warnings(self, root: ET.Element, **kwargs) -> list:
+        result = _empty_result()
+        SVGQualityChecker(**kwargs)._check_information_form(root, result)
+        return result['warnings']
+
+    def test_relationship_title_with_prose_only_warns(self) -> None:
+        warnings = self._warnings(self._page())
+        self.assertTrue(
+            any('Information form' in warning for warning in warnings), warnings
+        )
+
+    def test_connector_clears_the_advisory(self) -> None:
+        root = self._page('<path d="M 100 300 L 300 300" marker-end="url(#a)"/>')
+        self.assertEqual(self._warnings(root), [])
+
+    def test_content_image_clears_the_advisory(self) -> None:
+        self.assertEqual(self._warnings(self._page(self.RICH_IMAGE)), [])
+
+    def test_logo_sized_image_keeps_the_advisory(self) -> None:
+        root = self._page('<image x="1134" y="0" width="69" height="50" href="logo.png"/>')
+        self.assertTrue(self._warnings(root))
+
+    def test_unrelated_title_stays_silent(self) -> None:
+        self.assertEqual(self._warnings(self._page(title='本次範圍說明')), [])
+
+    def test_template_mode_is_exempt(self) -> None:
+        self.assertEqual(self._warnings(self._page(), template_mode=True), [])

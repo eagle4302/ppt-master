@@ -1449,6 +1449,7 @@ class SVGQualityChecker:
 
                 # 8e. Validate rendering-neutral page/structure compiler hints.
                 self._check_semantic_markers(root, svg_path, result)
+                self._check_information_form(root, result)
 
                 # 9. Compare values with spec_lock anchors. Additional colors
                 #    and fonts are informational. Generated-page type sizes may
@@ -1735,6 +1736,8 @@ class SVGQualityChecker:
                     included_text_ids,
                 )
                 self._check_roundtrip_chart_edits(root, baseline_root, source_document, result)
+                if included_text_ids:
+                    self._check_information_form(root, result)
             result['passed'] = len(result['errors']) == 0
         except Exception as exc:
             result['errors'].append(f"Failed to read file: {exc}")
@@ -6495,6 +6498,101 @@ class SVGQualityChecker:
                 result['errors'].append(issue.message)
             else:
                 result['warnings'].append(issue.message)
+
+    # Relationship vocabulary for the information-form advisory. A title in a
+    # language this list does not cover simply never triggers it.
+    _RELATION_TITLE_SUBSTRINGS = (
+        '流程', '步驟', '架構', '時序', '順序', '階段', '循環', '迴圈',
+        '關係', '對照', '比較', '分支', '展開', '演進', '疊加',
+    )
+    _RELATION_TITLE_WORDS = (
+        'flow', 'process', 'step', 'steps', 'architecture', 'sequence',
+        'timeline', 'pipeline', 'workflow', 'loop', 'cycle', 'stage',
+        'stages', 'hierarchy', 'comparison', 'roadmap',
+    )
+
+    def _check_information_form(self, root: ET.Element, result: Dict) -> None:
+        """Advisory: a relationship title on a page with no relationship structure.
+
+        shared-standards-core §6 asks for a diagram first, then a chart, then a
+        table, and prose only when none fits. This catches the cheap case: the
+        page title promises a flow, sequence, or hierarchy, yet the page carries
+        no diagram, native chart/table, connector, or content-sized image. Prose
+        that genuinely has no other form stays valid — the warning asks for the
+        stated reason instead of a silent step down. Template and mirror fidelity
+        contexts are exempt, because there the source form is the deliverable.
+        """
+        if self.template_mode:
+            return
+        text_tag = f'{{{SVG_NS}}}text'
+        if len(list(root.iter(text_tag))) < 3:
+            return
+        title = self._relationship_title(root, text_tag)
+        if title is None or self._has_relationship_structure(root):
+            return
+        result['warnings'].append(
+            f'Information form: the title "{title}" promises a relationship, but '
+            'the page carries no diagram, chart, table, connector, or image — '
+            'draw the relationship, or record in the page plan why prose is the '
+            'only fit (shared-standards-core.md §6) (advisory)'
+        )
+
+    @classmethod
+    def _relationship_title(
+        cls,
+        root: ET.Element,
+        text_tag: str,
+    ) -> str | None:
+        """Return the largest-font text when it promises a relationship."""
+        best_size, best_text = -1.0, None
+        for element in root.iter(text_tag):
+            plain = ''.join(element.itertext()).strip()
+            if len(plain) < 4:
+                continue
+            try:
+                size = float(element.get('font-size', '16'))
+            except (TypeError, ValueError):
+                size = 16.0
+            if size > best_size:
+                best_size, best_text = size, plain
+        if best_text is None:
+            return None
+        if any(token in best_text for token in cls._RELATION_TITLE_SUBSTRINGS):
+            return best_text
+        lowered = best_text.lower()
+        if any(word in lowered for word in cls._RELATION_TITLE_WORDS):
+            return best_text
+        return None
+
+    @classmethod
+    def _has_relationship_structure(cls, root: ET.Element) -> bool:
+        """Report whether the page already carries a non-prose carrier."""
+        viewbox = _parse_viewbox_values(root.get('viewBox', ''))
+        canvas_area = viewbox[2] * viewbox[3] if viewbox else 0.0
+        for element in root.iter():
+            tag = element.tag.rsplit('}', 1)[-1]
+            if tag in {'line', 'polyline'}:
+                return True
+            if tag == 'image' and cls._is_content_image(element, canvas_area):
+                return True
+            if element.get('marker-end') or element.get('marker-start'):
+                return True
+            if element.get('data-pptx-native-authority') is not None:
+                return True
+            preset = element.get('data-pptx-prst') or ''
+            if preset == 'line' or 'Connector' in preset:
+                return True
+        return False
+
+    @staticmethod
+    def _is_content_image(element: ET.Element, canvas_area: float) -> bool:
+        """Distinguish a content image from a logo-sized decoration."""
+        try:
+            width = float(element.get('width', '0'))
+            height = float(element.get('height', '0'))
+        except (TypeError, ValueError):
+            return False
+        return canvas_area > 0 and width * height >= canvas_area * 0.05
 
     def _get_spec_lock(self, svg_path: Path):
         """Locate and parse spec_lock.md near the SVG. Returns dict or None.
