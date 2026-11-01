@@ -17,7 +17,7 @@ description: One-pass Generate profile for agent-decided preparation, direct SVG
 | Concern | Quick Generate contract |
 |---|---|
 | Authority | Follow every explicit user requirement; decide every unspecified choice directly without asking |
-| Interaction | The main agent decides content, design, resources, and implementation without Strategist, Confirm UI, or approval stops; pause only for user interruption or an unresolved hard prerequisite |
+| Interaction | The main agent decides content, design, resources, and implementation without Strategist, Confirm UI, or approval stops; pause only for user interruption or an unresolved hard prerequisite. The first-implementation information-form question is not asked: apply diagram, then chart, then table, then prose |
 | Execution memory | Routine page, visual, and resource decisions live only in the active context; losing it restarts Quick rather than reconstructing a plan from files |
 | Inputs | Any supported Generate input; convert/import sources and run bounded research when needed |
 | Templates | Validate and install at most one exact workspace root per kind supplied for this run; before P01 inspect the complete installed SVG roster and freeze one Template Application paragraph in context; with no root, free design without catalog selection |

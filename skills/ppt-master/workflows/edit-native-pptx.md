@@ -96,7 +96,7 @@ python3 skills/ppt-master/scripts/svg_authoring_view.py "projects/<slug>_<YYYYMM
 
 ### 4.3 Confirmation
 
-⛔ **BLOCKING**: present one plan and wait for explicit confirmation before editing any SVG, writing notes, generating audio, or exporting: the output roster (output page → source slide → referenced / edited / new copy, with a one-line reason per edited or dropped page), the content mapping (which material goes where, what is dropped for lack of a fitting layout), each enhancement module on/off with its effect and duration, and any §4.1 fail-closed case the plan must avoid. Chat confirmation suffices; write `page_plan.json` afterwards.
+⛔ **BLOCKING**: present one plan and wait for explicit confirmation before editing any SVG, writing notes, generating audio, or exporting: the output roster (output page → source slide → referenced / edited / new copy, with a one-line reason per edited or dropped page), the content mapping (which material goes where, what is dropped for lack of a fitting layout, and — after the once-per-deck diagram/chart/table/prose question — each page's information form), each enhancement module on/off with its effect and duration, and any §4.1 fail-closed case the plan must avoid. Chat confirmation suffices; write `page_plan.json` afterwards.
 
 ---
 

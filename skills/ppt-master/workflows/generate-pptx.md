@@ -82,7 +82,7 @@ Resolve the surface under [`confirm-surface.md`](../references/confirm-surface.m
 | UI | Embed `template_options` in `recommendations.stage1.json`: `schema_version: 1`, `phase: "template"`, UI `lang`, all supplied roots as absolute `explicit_workspace_roots` (empty array when none), and `default_mode` — `templates` for explicit intent or supplied roots, otherwise `free_design`. Do not launch yet; the server reads indexes. |
 | Chat / delegated | Retain the same candidate boundary in context and create no UI artifact. |
 
-Stage 1 initializes from `default_mode` but the user may switch. Template mode requires at least one selection; exactly one supplied root may be preselected, several remain unselected.
+Stage 1 initializes from `default_mode` but the user may switch. Template mode requires at least one selection; exactly one supplied root may be preselected, several remain unselected. Stage 1 also asks once whether the deck prefers diagram, chart, table, then prose (§6 of the shared standards); the answer governs every page.
 
 **✅ Checkpoint** — candidates ready; nothing selected, validated, or installed. Proceed to Step 4 without a user-visible stop.
 
